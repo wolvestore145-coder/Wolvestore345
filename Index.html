@@ -1,0 +1,338 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>نظام إدارة المخزون</title>
+<link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+:root{--bg:#f3f5f7;--card:#fff;--tx:#17212b;--mut:#697684;--bd:#e1e6eb;--pr:#0f766e;--buy:#2563eb;--sell:#16a34a;--warn:#d97706;--dng:#dc2626;--side:#10282c;--r:12px}
+body.dark{--bg:#0d1417;--card:#162026;--tx:#e6edf1;--mut:#8ea0ab;--bd:#25333b;--side:#091013}
+*{box-sizing:border-box}
+body{margin:0;font-family:Tajawal,Tahoma,Arial,sans-serif;background:var(--bg);color:var(--tx);font-size:15px}
+button,input,select,textarea{font:inherit;color:inherit}
+input,select,textarea{width:100%;padding:9px 11px;border:1px solid var(--bd);border-radius:8px;background:var(--card)}
+input:focus,select:focus,textarea:focus,button:focus-visible{outline:2px solid var(--pr);outline-offset:1px}
+label{display:block;font-size:13px;color:var(--mut);margin-bottom:10px}
+label>*{margin-top:4px;color:var(--tx)}
+.btn{border:0;border-radius:8px;padding:9px 16px;background:var(--pr);color:#fff;cursor:pointer;font-weight:500;transition:.15s}
+.btn:hover{filter:brightness(1.1)}
+.btn.sec{background:transparent;border:1px solid var(--bd);color:var(--tx)}
+.btn.red{background:var(--dng)}.btn.sm{padding:5px 10px;font-size:13px}
+#side{position:fixed;inset:0 0 0 auto;width:230px;background:var(--side);color:#cfe3e1;padding:18px 12px;z-index:20;overflow:auto;transition:transform .25s}
+#side h1{font-size:17px;margin:0 8px 18px;color:#fff;display:flex;align-items:center;gap:8px}
+#side h1 img{width:34px;height:34px;border-radius:8px;object-fit:cover}
+#side a{display:block;padding:10px 12px;border-radius:9px;color:inherit;text-decoration:none;cursor:pointer;margin-bottom:3px}
+#side a:hover{background:rgba(255,255,255,.08)}
+#side a.on{background:var(--pr);color:#fff}
+#top{margin-right:230px;height:58px;background:var(--card);border-bottom:1px solid var(--bd);display:flex;align-items:center;gap:10px;padding:0 18px;position:sticky;top:0;z-index:10}
+#top input{max-width:360px}
+#main{margin-right:230px;padding:20px}
+#menu{display:none}
+.card{background:var(--card);border:1px solid var(--bd);border-radius:var(--r);padding:16px;margin-bottom:16px}
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px;margin-bottom:16px}
+.stat{background:var(--card);border:1px solid var(--bd);border-radius:var(--r);padding:14px;border-right:4px solid var(--c,var(--pr))}
+.stat b{display:block;font-size:22px;margin-top:4px}.stat span{color:var(--mut);font-size:13px}
+.g2{display:grid;grid-template-columns:3fr 2fr;gap:16px}
+.g4{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:12px}
+.bar{display:flex;align-items:center;gap:8px;margin:8px 0;font-size:13px}
+.bar i{display:block;height:10px;border-radius:5px;background:var(--pr)}
+.bar span:first-child{width:90px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.tb{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;align-items:center}
+.tb>*{flex:1;min-width:120px}.tb .btn{flex:0 0 auto}
+.wrap{overflow-x:auto}
+table{width:100%;border-collapse:collapse}
+th,td{padding:10px;text-align:right;border-bottom:1px solid var(--bd);white-space:nowrap}
+th{font-size:13px;color:var(--mut);font-weight:500;background:var(--bg)}
+tr:hover td{background:rgba(15,118,110,.05)}
+.empty{text-align:center;color:var(--mut);padding:24px}
+.tag{padding:3px 9px;border-radius:20px;font-size:12px;font-weight:500;color:#fff;background:var(--mut)}
+.ok,.sell{background:var(--sell)}.low,.adj{background:var(--warn)}.out,.del{background:var(--dng)}.buy{background:var(--buy)}.add{background:#7c3aed}
+.chart{width:100%;height:auto}
+.lg{display:flex;gap:14px;font-size:13px;color:var(--mut);margin-bottom:6px}
+.lg i{display:inline-block;width:10px;height:10px;border-radius:3px;margin-left:5px}
+#ov{position:fixed;inset:0;background:rgba(0,0,0,.5);display:none;align-items:center;justify-content:center;z-index:50;padding:14px}
+#ov.on{display:flex}
+#box{background:var(--card);border-radius:14px;padding:20px;width:100%;max-width:520px;max-height:92vh;overflow:auto;animation:pop .18s}
+@keyframes pop{from{transform:scale(.96);opacity:0}}
+#box h3{margin:0 0 14px}.acts{display:flex;gap:8px;justify-content:flex-start;margin-top:12px}
+#toast{position:fixed;bottom:18px;left:18px;z-index:99;display:flex;flex-direction:column;gap:8px}
+.t{padding:11px 16px;border-radius:9px;color:#fff;background:var(--sell);box-shadow:0 4px 14px rgba(0,0,0,.25)}.t.err{background:var(--dng)}
+#login{position:fixed;inset:0;z-index:90;background:var(--side);display:flex;align-items:center;justify-content:center;padding:14px}
+#login .card{width:100%;max-width:360px;margin:0}
+#pa{display:none}
+@media(max-width:860px){#side{transform:translateX(100%)}body.nav #side{transform:none}#top,#main{margin-right:0}#menu{display:block}.g2{grid-template-columns:1fr}}
+@media print{body>*:not(#pa){display:none!important}#pa{display:block!important;color:#000;background:#fff;font-size:12px}#pa th{background:#eee;color:#000}#pa td,#pa th{padding:5px;white-space:normal}@page{size:A4;margin:14mm}}
+</style>
+</head>
+<body>
+<div id="login" style="display:none"><div class="card"><h2 style="margin-top:0">تسجيل الدخول</h2>
+<label>اسم المستخدم<input id="lu" autocomplete="username"></label>
+<label>كلمة المرور<input id="lp" type="password" autocomplete="current-password" onkeydown="if(event.key==='Enter')login()"></label>
+<button class="btn" style="width:100%" onclick="login()">دخول</button>
+</div></div>
+<nav id="side"></nav>
+<header id="top"><button id="menu" class="btn sec" onclick="document.body.classList.toggle('nav')">☰</button>
+<input id="gs" placeholder="🔍 بحث سريع عن صنف ثم Enter" onkeydown="if(event.key==='Enter'){pf.q=this.value;go('products')}">
+<button class="btn sec" onclick="toggleDark()" title="الوضع الليلي">🌓</button><button class="btn sec" onclick="logout()">خروج</button></header>
+<main id="main"></main>
+<div id="ov"><div id="box"></div></div><div id="toast"></div><div id="pa"></div>
+
+<script>
+/* ========== الحالة والبيانات ========== */
+const KEY='inv_system_v1';
+const DEF_CATS=['هواتف','شاشات','بطاريات','قطع غيار','إكسسوارات','شواحن','كابلات','أدوات','أخرى'];
+const T={buy:['شراء','buy'],sell:['بيع','sell'],adjust:['تعديل مخزون','adj'],add:['إضافة صنف','add'],edit:['تعديل صنف','adj'],del:['حذف صنف','del']};
+const NAV=[['home','🏠','الرئيسية'],['products','📦','الأصناف'],['buy','🛒','المشتريات'],['sell','💰','المبيعات'],['log','📋','حركة المخزون'],['cats','🏷️','الأقسام'],['reports','📊','التقارير'],['settings','⚙️','الإعدادات']];
+let db,view='home',saveHandler=null;
+let pf={q:'',cat:'',st:'',sort:'name'},lf={type:'',q:'',from:'',to:''},rf={from:'',to:''};
+
+const $=s=>document.querySelector(s);
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const fm=n=>(+n||0).toLocaleString('en-US',{maximumFractionDigits:2});
+const money=n=>fm(n)+' '+esc(db.settings.currency);
+const fd=d=>new Date(d).toLocaleString('ar-EG-u-nu-latn',{dateStyle:'short',timeStyle:'short'});
+const ld=d=>{const x=new Date(d);return x.getFullYear()+'-'+String(x.getMonth()+1).padStart(2,'0')+'-'+String(x.getDate()).padStart(2,'0')};
+const val=id=>document.getElementById(id).value.trim();
+const num=id=>parseFloat(document.getElementById(id).value);
+
+function hashPw(p){let a=0xdeadbeef,b=0x41c6ce57;for(const ch of 'inv#'+p+'#salt'){const c=ch.charCodeAt(0);a=Math.imul(a^c,2654435761);b=Math.imul(b^c,1597334677)}a=Math.imul(a^(a>>>16),2246822507)^Math.imul(b^(b>>>13),3266489909);b=Math.imul(b^(b>>>16),2246822507)^Math.imul(a^(a>>>13),3266489909);return 'h:'+(4294967296*(2097151&b)+(a>>>0)).toString(36)}
+function fresh(){return{products:[],cats:DEF_CATS.map((n,i)=>({id:i+1,name:n})),tx:[],seq:100,settings:{store:'متجري',currency:'ر.س',user:'admin',pass:hashPw('1234'),dark:false,logo:''}}}
+function loadData(){try{db=JSON.parse(localStorage.getItem(KEY))}catch(e){db=null}
+ if(!db||!Array.isArray(db.products)||!db.settings)db=fresh()}
+function saveData(){try{localStorage.setItem(KEY,JSON.stringify(db))}catch(e){toast('تعذر حفظ البيانات: '+e.message,1)}}
+const nid=()=>db.seq++;
+const catName=id=>(db.cats.find(c=>c.id==id)||{name:'—'}).name;
+const getP=id=>db.products.find(p=>p.id==id);
+const st=p=>p.qty<=0?'out':p.qty<=p.min?'low':'ok';
+const stL={ok:'متوفر',low:'منخفض',out:'منتهي'};
+const calculateTotal=(q,p)=>(+q||0)*(+p||0);
+
+function toast(m,err){const t=document.createElement('div');t.className='t'+(err?' err':'');t.textContent=m;$('#toast').append(t);setTimeout(()=>t.remove(),3200)}
+function modal(title,body,onSave,label='حفظ'){saveHandler=onSave;
+ $('#box').innerHTML=`<h3>${title}</h3>${body}<div class="acts">${onSave?`<button class="btn" onclick="if(saveHandler()!==false)closeModal()">${label}</button>`:''}<button class="btn sec" onclick="closeModal()">إغلاق</button></div>`;
+ $('#ov').classList.add('on')}
+function closeModal(){$('#ov').classList.remove('on')}
+document.addEventListener('keydown',e=>{if(e.key==='Escape')closeModal()});
+
+/* سجل التدقيق + الحركات */
+function log(type,p,qty,price,note=''){db.tx.unshift({id:nid(),date:new Date().toISOString(),type,pid:p.id,name:p.name,qty,price,total:calculateTotal(qty,price),note})}
+function updateStock(p,delta){p.qty=Math.round((p.qty+delta)*1000)/1000}
+
+/* ========== العمليات ========== */
+function readProduct(){
+ const d={name:val('pn'),code:val('pc'),cat:+val('pg'),buy:num('pb'),sell:num('ps'),min:num('pm'),note:val('pt')};
+ if(!d.name)return toast('اسم الصنف مطلوب',1);
+ if(!d.code)return toast('رمز الصنف مطلوب',1);
+ if([d.buy,d.sell,d.min].some(x=>isNaN(x)||x<0))return toast('الأسعار والحد الأدنى يجب أن تكون أرقامًا غير سالبة',1);
+ return d}
+function addProduct(){
+ const d=readProduct();if(!d)return false;
+ const q=isNaN(num('pq'))?0:num('pq');if(q<0){toast('لا يمكن إدخال كمية سالبة',1);return false}
+ if(db.products.some(p=>p.code.toLowerCase()==d.code.toLowerCase())){toast('رمز الصنف مستخدم من قبل',1);return false}
+ const p={id:nid(),...d,qty:q};db.products.push(p);log('add',p,q,d.buy,'إضافة صنف جديد');
+ saveData();toast('تمت إضافة الصنف');render()}
+function editProduct(id){
+ const d=readProduct();if(!d)return false;const p=getP(id);
+ if(db.products.some(x=>x.id!=id&&x.code.toLowerCase()==d.code.toLowerCase())){toast('رمز الصنف مستخدم من قبل',1);return false}
+ Object.assign(p,d);log('edit',p,0,0,'تعديل بيانات الصنف');saveData();toast('تم تعديل الصنف');render()}
+function deleteProduct(id){const p=getP(id);
+ if(!confirm('هل تريد حذف الصنف "'+p.name+'"؟ لا يمكن التراجع.'))return;
+ db.products=db.products.filter(x=>x.id!=id);log('del',p,p.qty,p.buy,'حذف صنف');saveData();toast('تم حذف الصنف');render()}
+function adjustStock(id){const p=getP(id),n=num('aq'),r=val('ar');
+ if(isNaN(n)||n<0){toast('الكمية الجديدة غير صالحة',1);return false}
+ if(!r){toast('سبب التعديل مطلوب',1);return false}
+ const diff=n-p.qty;updateStock(p,diff);log('adjust',p,diff,p.buy,r);saveData();toast('تم تعديل الكمية');render()}
+function addPurchase(){
+ const p=getP(val('tp')),q=num('tq'),pr=num('tpr');
+ if(!p)return toast('اختر الصنف',1);
+ if(isNaN(q)||q<=0)return toast('أدخل كمية صحيحة أكبر من صفر',1);
+ if(isNaN(pr)||pr<0)return toast('أدخل سعر شراء صحيح',1);
+ updateStock(p,q);p.buy=pr;log('buy',p,q,pr);saveData();toast('تم تسجيل الشراء — الكمية الآن '+p.qty);render()}
+function addSale(){
+ const p=getP(val('tp')),q=num('tq'),pr=num('tpr');
+ if(!p)return toast('اختر الصنف',1);
+ if(isNaN(q)||q<=0)return toast('أدخل كمية صحيحة أكبر من صفر',1);
+ if(isNaN(pr)||pr<0)return toast('أدخل سعر بيع صحيح',1);
+ if(q>p.qty)return toast('الكمية المطلوبة غير متوفرة في المخزون.',1);
+ updateStock(p,-q);log('sell',p,q,pr);saveData();toast('تم تسجيل البيع — المتبقي '+p.qty);
+ if(st(p)!='ok')setTimeout(()=>toast('تنبيه: '+p.name+' '+(st(p)=='out'?'نفد من المخزون':'أوشك على النفاد'),1),400);render()}
+
+/* ========== الواجهة ========== */
+function go(v){view=v;document.body.classList.remove('nav');render()}
+function render(){
+ $('#side').innerHTML=`<h1>${db.settings.logo?`<img src="${db.settings.logo}">`:'📦'}${esc(db.settings.store)}</h1>`+NAV.map(n=>`<a class="${n[0]==view?'on':''}" onclick="go('${n[0]}')">${n[1]} ${n[2]}</a>`).join('');
+ ({home:renderDashboard,products:renderProducts,buy:()=>renderTrade('buy'),sell:()=>renderTrade('sell'),log:renderTransactions,cats:renderCats,reports:renderReports,settings:renderSettings})[view]()}
+const tbl=(h,r)=>`<div class="wrap"><table><thead><tr>${h.map(x=>`<th>${x}</th>`).join('')}</tr></thead><tbody>${r.map(c=>`<tr>${c.map(x=>`<td>${x}</td>`).join('')}</tr>`).join('')||`<tr><td class="empty" colspan="${h.length}">لا توجد بيانات</td></tr>`}</tbody></table></div>`;
+const tag=(k,l)=>`<span class="tag ${k}">${l}</span>`;
+const range=(t,f,to)=>db.tx.filter(x=>x.type==t&&(!f||ld(x.date)>=f)&&(!to||ld(x.date)<=to));
+const sumT=(t,f,to)=>range(t,f,to).reduce((a,x)=>a+x.total,0);
+
+/* الرئيسية */
+function renderDashboard(){
+ const P=db.products,qty=P.reduce((a,p)=>a+p.qty,0);
+ const c=[['📦','إجمالي الأصناف',P.length,'#0f766e'],['🔢','إجمالي الكميات',fm(qty),'#6366f1'],['🛒','إجمالي المشتريات',money(sumT('buy')),'#2563eb'],['💰','إجمالي المبيعات',money(sumT('sell')),'#16a34a'],['📉','أصناف منخفضة',P.filter(p=>st(p)=='low').length,'#d97706'],['🚨','أصناف منتهية',P.filter(p=>st(p)=='out').length,'#dc2626']];
+ const top=[...P].sort((a,b)=>b.qty-a.qty).slice(0,6),mx=Math.max(1,...top.map(p=>p.qty));
+ const alerts=P.filter(p=>st(p)!='ok');
+ $('#main').innerHTML=`<div class="cards">${c.map(x=>`<div class="stat" style="--c:${x[3]}"><span>${x[0]} ${x[1]}</span><b>${x[2]}</b></div>`).join('')}</div>
+ <div class="g2"><div class="card"><b>المبيعات والمشتريات — آخر 7 أيام</b><div class="lg"><span><i style="background:var(--sell)"></i>مبيعات</span><span><i style="background:var(--buy)"></i>مشتريات</span></div>${chart()}</div>
+ <div class="card"><b>حركة المخزون — الأعلى كمية</b>${top.map(p=>`<div class="bar"><span>${esc(p.name)}</span><i style="width:${p.qty/mx*100}%"></i><span>${fm(p.qty)}</span></div>`).join('')||'<p class="empty">أضف أصنافًا لتظهر هنا</p>'}</div></div>
+ <div class="card"><b>🔔 تنبيهات المخزون</b>${tbl(['الصنف','الكمية','الحد الأدنى','الحالة'],alerts.map(p=>[esc(p.name),fm(p.qty),p.min,tag(st(p),stL[st(p)])]))}</div>`}
+function chart(){
+ const days=[...Array(7)].map((_,i)=>{const d=new Date();d.setDate(d.getDate()-6+i);return ld(d)});
+ const s=days.map(d=>sumT('sell',d,d)),b=days.map(d=>sumT('buy',d,d)),m=Math.max(1,...s,...b);
+ let o='<svg viewBox="0 0 600 220" class="chart">';
+ days.forEach((d,i)=>{const x=530-i*82,hs=s[i]/m*150,hb=b[i]/m*150;
+  o+=`<rect x="${x}" y="${170-hs}" width="26" height="${hs}" rx="4" fill="var(--sell)"><title>${fm(s[i])}</title></rect><rect x="${x-30}" y="${170-hb}" width="26" height="${hb}" rx="4" fill="var(--buy)"><title>${fm(b[i])}</title></rect><text x="${x-2}" y="195" text-anchor="middle" fill="var(--mut)" font-size="12">${d.slice(5)}</text>`});
+ return o+'</svg>'}
+
+/* الأصناف */
+function renderProducts(){
+ $('#main').innerHTML=`<div class="card"><div class="tb"><input id="fq" placeholder="بحث بالاسم أو الرمز" value="${esc(pf.q)}" oninput="pf.q=this.value;drawProducts()">
+ <select id="fc" onchange="pf.cat=this.value;drawProducts()"><option value="">كل الأقسام</option>${db.cats.map(c=>`<option value="${c.id}" ${pf.cat==c.id?'selected':''}>${esc(c.name)}</option>`).join('')}</select>
+ <select onchange="pf.st=this.value;drawProducts()"><option value="">كل الحالات</option><option value="ok" ${pf.st=='ok'?'selected':''}>متوفر</option><option value="low" ${pf.st=='low'?'selected':''}>منخفض</option><option value="out" ${pf.st=='out'?'selected':''}>منتهي</option></select>
+ <select onchange="pf.sort=this.value;drawProducts()">${[['name','ترتيب: الاسم'],['qty','ترتيب: الكمية'],['sell','ترتيب: سعر البيع'],['code','ترتيب: الرمز']].map(o=>`<option value="${o[0]}" ${pf.sort==o[0]?'selected':''}>${o[1]}</option>`).join('')}</select>
+ <button class="btn sec" onclick="exportExcel('المخزون')">📗 Excel</button><button class="btn" onclick="productForm()">+ صنف جديد</button></div><div id="pt"></div></div>`;drawProducts()}
+function drawProducts(){
+ const q=pf.q.toLowerCase();
+ let L=db.products.filter(p=>(!q||p.name.toLowerCase().includes(q)||p.code.toLowerCase().includes(q))&&(!pf.cat||p.cat==pf.cat)&&(!pf.st||st(p)==pf.st));
+ L.sort((a,b)=>pf.sort=='qty'||pf.sort=='sell'?a[pf.sort]-b[pf.sort]:String(a[pf.sort]).localeCompare(String(b[pf.sort]),'ar'));
+ $('#pt').innerHTML=tbl(['الرمز','الصنف','القسم','الكمية','الشراء','البيع','الأدنى','الحالة',''],L.map(p=>[esc(p.code),`<b>${esc(p.name)}</b>`,esc(catName(p.cat)),fm(p.qty),fm(p.buy),fm(p.sell),p.min,tag(st(p),stL[st(p)]),
+ `<button class="btn sm sec" onclick="productForm(${p.id})">تعديل</button> <button class="btn sm sec" onclick="adjustForm(${p.id})">الكمية</button> <button class="btn sm red" onclick="deleteProduct(${p.id})">حذف</button>`]))}
+function productForm(id){const p=id?getP(id):{name:'',code:'',cat:db.cats[0]?.id,qty:0,buy:0,sell:0,min:5,note:''};
+ modal(id?'تعديل صنف':'إضافة صنف',`<label>اسم الصنف<input id="pn" value="${esc(p.name)}"></label><div class="g4"><label>الرمز / الكود<input id="pc" value="${esc(p.code)}"></label>
+ <label>القسم<select id="pg">${db.cats.map(c=>`<option value="${c.id}" ${c.id==p.cat?'selected':''}>${esc(c.name)}</option>`).join('')}</select></label>
+ ${id?'':`<label>الكمية الحالية<input id="pq" type="number" min="0" value="0"></label>`}
+ <label>سعر الشراء<input id="pb" type="number" min="0" step="any" value="${p.buy}"></label><label>سعر البيع<input id="ps" type="number" min="0" step="any" value="${p.sell}"></label>
+ <label>الحد الأدنى<input id="pm" type="number" min="0" value="${p.min}"></label></div><label>ملاحظات<textarea id="pt" rows="2">${esc(p.note)}</textarea></label>`,()=>id?editProduct(id):addProduct())}
+function adjustForm(id){const p=getP(id);
+ modal('تعديل الكمية يدويًا — '+esc(p.name),`<p>الكمية الحالية: <b>${fm(p.qty)}</b></p><label>الكمية الجديدة<input id="aq" type="number" min="0" value="${p.qty}"></label><label>سبب التعديل (مطلوب)<input id="ar" placeholder="جرد، تالف، خطأ إدخال..."></label>`,()=>adjustStock(id))}
+
+/* الشراء والبيع */
+function renderTrade(t){const buy=t=='buy',list=range(t).slice(0,100);
+ $('#main').innerHTML=`<div class="card"><h3 style="margin-top:0">${buy?'🛒 تسجيل عملية شراء':'💰 تسجيل عملية بيع'}</h3><div class="g4">
+ <label>الصنف<select id="tp" onchange="tpChg('${t}')"><option value="">— اختر —</option>${db.products.map(p=>`<option value="${p.id}">${esc(p.name)} (${esc(p.code)})</option>`).join('')}</select></label>
+ <label>الكمية المتوفرة<input id="ta" disabled value="—"></label>
+ <label>${buy?'الكمية المشتراة':'كمية البيع'}<input id="tq" type="number" min="1" value="1" oninput="tcalc()"></label>
+ <label>${buy?'سعر الشراء':'سعر البيع'}<input id="tpr" type="number" min="0" step="any" value="0" oninput="tcalc()"></label>
+ <label>الإجمالي<input id="tt" disabled value="0"></label></div>
+ <button class="btn" onclick="${buy?'addPurchase':'addSale'}()">${buy?'تسجيل الشراء':'تسجيل البيع'}</button></div>
+ <div class="card"><b>${buy?'سجل المشتريات':'سجل المبيعات'}</b>${tbl(['#','التاريخ','الصنف','الكمية','السعر','الإجمالي'],list.map(x=>[x.id,fd(x.date),esc(x.name),fm(x.qty),fm(x.price),money(x.total)]))}</div>`}
+function tpChg(t){const p=getP(val('tp'));$('#ta').value=p?fm(p.qty):'—';$('#tpr').value=p?(t=='buy'?p.buy:p.sell):0;tcalc()}
+function tcalc(){$('#tt').value=fm(calculateTotal(num('tq'),num('tpr')))}
+
+/* حركة المخزون */
+function filterTx(){const q=lf.q.toLowerCase();return db.tx.filter(x=>(!lf.type||x.type==lf.type)&&(!q||x.name.toLowerCase().includes(q))&&(!lf.from||ld(x.date)>=lf.from)&&(!lf.to||ld(x.date)<=lf.to))}
+const txRows=L=>L.map(x=>[x.id,fd(x.date),tag(T[x.type][1],T[x.type][0]),esc(x.name),fm(x.qty),fm(x.price),fm(x.total),esc(x.note||'')]);
+const txHead=['#','التاريخ','النوع','الصنف','الكمية','السعر','الإجمالي','ملاحظة'];
+function renderTransactions(){
+ $('#main').innerHTML=`<div class="card"><div class="tb"><select onchange="lf.type=this.value;drawTx()"><option value="">كل العمليات</option>${Object.entries(T).map(([k,v])=>`<option value="${k}" ${lf.type==k?'selected':''}>${v[0]}</option>`).join('')}</select>
+ <input placeholder="اسم الصنف" value="${esc(lf.q)}" oninput="lf.q=this.value;drawTx()"><input type="date" value="${lf.from}" onchange="lf.from=this.value;drawTx()"><input type="date" value="${lf.to}" onchange="lf.to=this.value;drawTx()">
+ <button class="btn sec" onclick="printDoc('سجل الحركات',tbl(txHead,txRows(filterTx())))">🖨️ طباعة</button><button class="btn sec" onclick="exportExcel('حركة المخزون')">📗 Excel</button></div><div id="tx"></div></div>`;drawTx()}
+function drawTx(){$('#tx').innerHTML=tbl(txHead,txRows(filterTx().slice(0,300)))}
+
+/* الأقسام */
+function renderCats(){
+ $('#main').innerHTML=`<div class="card"><div class="tb"><b style="flex:1">الأقسام</b><button class="btn" onclick="catForm()">+ قسم جديد</button></div>${tbl(['القسم','عدد الأصناف',''],db.cats.map(c=>[esc(c.name),db.products.filter(p=>p.cat==c.id).length,`<button class="btn sm sec" onclick="catForm(${c.id})">تعديل</button> <button class="btn sm red" onclick="delCat(${c.id})">حذف</button>`]))}</div>`}
+function catForm(id){const c=id?db.cats.find(x=>x.id==id):{name:''};
+ modal(id?'تعديل قسم':'قسم جديد',`<label>اسم القسم<input id="cn" value="${esc(c.name)}"></label>`,()=>{const n=val('cn');
+  if(!n){toast('اسم القسم مطلوب',1);return false}
+  if(db.cats.some(x=>x.id!=id&&x.name==n)){toast('القسم موجود بالفعل',1);return false}
+  id?c.name=n:db.cats.push({id:nid(),name:n});saveData();toast('تم الحفظ');render()})}
+function delCat(id){if(db.products.some(p=>p.cat==id))return toast('لا يمكن حذف قسم يحتوي على أصناف',1);
+ if(!confirm('حذف القسم؟'))return;db.cats=db.cats.filter(c=>c.id!=id);saveData();render()}
+
+/* التقارير */
+const invRows=()=>db.products.map(p=>[esc(p.code),esc(p.name),esc(catName(p.cat)),fm(p.qty),fm(p.buy),fm(p.qty*p.buy),stL[st(p)]]);
+const invHead=['الرمز','الصنف','القسم','الكمية','سعر الشراء','القيمة','الحالة'];
+const trRows=L=>L.map(x=>[x.id,fd(x.date),esc(x.name),fm(x.qty),fm(x.price),fm(x.total)]);
+const trHead=['#','التاريخ','الصنف','الكمية','السعر','الإجمالي'];
+function renderReports(){
+ const {from:f,to}=rf,S=range('sell',f,to),B=range('buy',f,to);
+ const tops={};S.forEach(x=>tops[x.name]=(tops[x.name]||0)+x.qty);
+ const topL=Object.entries(tops).sort((a,b)=>b[1]-a[1]).slice(0,10);
+ const val_=db.products.reduce((a,p)=>a+p.qty*p.buy,0);
+ $('#main').innerHTML=`<div class="card"><div class="tb"><label style="margin:0">من<input type="date" value="${f}" onchange="rf.from=this.value;renderReports()"></label><label style="margin:0">إلى<input type="date" value="${to}" onchange="rf.to=this.value;renderReports()"></label></div>
+ <div class="cards"><div class="stat"><span>قيمة المخزون الحالي</span><b>${money(val_)}</b></div><div class="stat" style="--c:#16a34a"><span>مبيعات الفترة</span><b>${money(S.reduce((a,x)=>a+x.total,0))}</b></div><div class="stat" style="--c:#2563eb"><span>مشتريات الفترة</span><b>${money(B.reduce((a,x)=>a+x.total,0))}</b></div></div>
+ <div class="tb"><button class="btn sec" onclick="printDoc('تقرير المخزون',tbl(invHead,invRows()))">🖨️ المخزون</button><button class="btn sec" onclick="printDoc('تقرير المبيعات',tbl(trHead,trRows(range('sell',rf.from,rf.to))))">🖨️ المبيعات</button><button class="btn sec" onclick="printDoc('تقرير المشتريات',tbl(trHead,trRows(range('buy',rf.from,rf.to))))">🖨️ المشتريات</button><button class="btn sec" onclick="printDoc('سجل الحركات',tbl(txHead,txRows(filterTx())))">🖨️ السجل</button><button class="btn" onclick="exportExcel()">📗 Excel (كل البيانات)</button></div></div>
+ <div class="g2"><div class="card"><b>أكثر الأصناف مبيعًا</b>${tbl(['الصنف','الكمية المباعة'],topL.map(x=>[esc(x[0]),fm(x[1])]))}</div>
+ <div class="card"><b>منخفضة / منتهية</b>${tbl(['الصنف','الكمية','الحالة'],db.products.filter(p=>st(p)!='ok').map(p=>[esc(p.name),fm(p.qty),tag(st(p),stL[st(p)])]))}</div></div>
+ <div class="card"><b>تقرير المخزون الحالي</b>${tbl(invHead,invRows())}</div>`}
+function printDoc(title,html){$('#pa').innerHTML=`<h2>${esc(db.settings.store)}</h2><h3>${title}</h3><p>${fd(new Date())}</p>${html}`;window.print()}
+
+/* الإعدادات */
+function renderSettings(){const s=db.settings;
+ $('#main').innerHTML=`<div class="card"><h3 style="margin-top:0">إعدادات المتجر</h3><div class="g4"><label>اسم المتجر<input id="s1" value="${esc(s.store)}"></label><label>العملة<input id="s2" value="${esc(s.currency)}"></label>
+ <label>اسم المستخدم<input id="s3" value="${esc(s.user)}"></label><label>كلمة مرور جديدة<input id="s4" type="password" placeholder="اتركها فارغة بدون تغيير"></label>
+ <label>الشعار<input type="file" accept="image/*" onchange="setLogo(this)"></label></div>
+ <button class="btn" onclick="saveSettings()">حفظ الإعدادات</button> <button class="btn sec" onclick="toggleDark()">🌓 الوضع الليلي</button></div>
+ <div class="card"><h3 style="margin-top:0">النسخ الاحتياطي والاستعادة</h3><p style="color:var(--mut);margin-top:0">آخر تصدير: <b>${lastBk()}</b></p>
+ <div class="tb"><button class="btn" onclick="exportBackup()">⬇️ تصدير نسخة JSON</button><button class="btn sec" onclick="$('#imp').click()">⬆️ استيراد نسخة</button><input id="imp" type="file" accept=".json" hidden onchange="importBackup(this.files[0])"><button class="btn sec" onclick="manualSnap()">💾 حفظ نسخة داخل المتصفح</button></div>
+ <b>النسخ المحفوظة داخل المتصفح (آخر 5)</b>${snapList()}</div>
+ <div class="card"><h3 style="margin-top:0">تصدير إلى Excel</h3><div class="tb"><button class="btn" onclick="exportExcel()">📗 كل البيانات</button><button class="btn sec" onclick="exportExcel('المخزون')">المخزون</button><button class="btn sec" onclick="exportExcel('المبيعات')">المبيعات</button><button class="btn sec" onclick="exportExcel('المشتريات')">المشتريات</button><button class="btn sec" onclick="exportExcel('حركة المخزون')">الحركات</button></div></div>
+ <div class="card"><button class="btn red" onclick="resetAll()">إعادة ضبط النظام</button></div>`}
+function saveSettings(){const s=db.settings;if(!val('s1')||!val('s3'))return toast('اسم المتجر واسم المستخدم مطلوبان',1);
+ s.store=val('s1');s.currency=val('s2');s.user=val('s3');if(val('s4')){if(val('s4').length<4)return toast('كلمة المرور قصيرة (4 أحرف على الأقل)',1);s.pass=hashPw(val('s4'))}
+ saveData();toast('تم حفظ الإعدادات');render()}
+function setLogo(i){const f=i.files[0];if(!f)return;if(f.size>300000)return toast('الصورة كبيرة، الحد 300KB',1);
+ const r=new FileReader();r.onload=()=>{db.settings.logo=r.result;saveData();render();toast('تم تحديث الشعار')};r.readAsDataURL(f)}
+function toggleDark(){db.settings.dark=!db.settings.dark;document.body.classList.toggle('dark',db.settings.dark);saveData()}
+/* ===== النسخ الاحتياطي ===== */
+const SNAP='inv_snaps_v1';
+const stamp=()=>ld(new Date())+'_'+new Date().toTimeString().slice(0,5).replace(':','-');
+const lastBk=()=>{const l=+localStorage.getItem('inv_lastbk');return l?fd(l):'لم يتم بعد'};
+const getSnaps=()=>{try{return JSON.parse(localStorage.getItem(SNAP))||[]}catch(e){return[]}};
+function makeSnap(label){try{const a=getSnaps();a.unshift({id:Date.now(),label,date:new Date().toISOString(),data:JSON.stringify(db)});localStorage.setItem(SNAP,JSON.stringify(a.slice(0,5)));return true}catch(e){toast('تعذر حفظ نسخة داخل المتصفح (المساحة ممتلئة)',1);return false}}
+function autoSnap(){if(!db.products.length&&!db.tx.length)return;const a=getSnaps().find(x=>x.label=='تلقائية');if(!a||Date.now()-a.id>864e5)makeSnap('تلقائية')}
+function manualSnap(){if(makeSnap('يدوية')){toast('تم حفظ نسخة داخل المتصفح');render()}}
+function remind(){if(!db.products.length)return;if(Date.now()-(+localStorage.getItem('inv_lastbk')||0)>7*864e5)setTimeout(()=>toast('تذكير: لم تُصدّر نسخة احتياطية منذ أكثر من أسبوع',1),800)}
+function download(blob,name){const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=name;document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(a.href),1500)}
+function snapList(){return tbl(['التاريخ','النوع','أصناف','حركات',''],getSnaps().map(s=>{let d={};try{d=JSON.parse(s.data)}catch(e){}
+ return[fd(s.date),esc(s.label),(d.products||[]).length,(d.tx||[]).length,`<button class="btn sm sec" onclick="restoreSnap(${s.id})">استعادة</button> <button class="btn sm sec" onclick="dlSnap(${s.id})">تنزيل</button> <button class="btn sm red" onclick="delSnap(${s.id})">حذف</button>`]}))}
+function restoreSnap(id){const s=getSnaps().find(x=>x.id==id);if(!s)return;
+ if(!confirm('استعادة نسخة '+fd(s.date)+'؟ سيتم حفظ نسخة من بياناتك الحالية أولًا.'))return;
+ try{const d=JSON.parse(s.data);makeSnap('قبل الاستعادة');applyRestore(d)}catch(e){toast('النسخة تالفة',1)}}
+function dlSnap(id){const s=getSnaps().find(x=>x.id==id);if(s)download(new Blob([JSON.stringify({app:'inventory-system',version:2,exportedAt:s.date,data:JSON.parse(s.data)},null,2)],{type:'application/json'}),'inventory-snapshot-'+ld(s.date)+'.json')}
+function delSnap(id){if(!confirm('حذف هذه النسخة؟'))return;localStorage.setItem(SNAP,JSON.stringify(getSnaps().filter(x=>x.id!=id)));render()}
+function exportBackup(){download(new Blob([JSON.stringify({app:'inventory-system',version:2,exportedAt:new Date().toISOString(),data:db},null,2)],{type:'application/json'}),'inventory-backup-'+stamp()+'.json');
+ localStorage.setItem('inv_lastbk',Date.now());toast('تم تصدير النسخة الاحتياطية');if(view=='settings')render()}
+let pendingImp=null;
+function importBackup(f){if(!f)return;const r=new FileReader();
+ r.onload=()=>{try{const j=JSON.parse(r.result),d=j.data||j;
+  if(!Array.isArray(d.products)||!Array.isArray(d.tx)||!Array.isArray(d.cats)||!d.settings)throw 0;
+  pendingImp=d;modal('معاينة النسخة الاحتياطية',`<p>تاريخ النسخة: <b>${j.exportedAt?fd(j.exportedAt):'غير معروف'}</b></p><p>الأصناف: <b>${d.products.length}</b> — الحركات: <b>${d.tx.length}</b> — الأقسام: <b>${d.cats.length}</b></p><p style="color:var(--dng)">سيتم استبدال البيانات الحالية. تُحفظ نسخة تلقائية منها قبل الاستعادة.</p>`,()=>{makeSnap('قبل الاستعادة');applyRestore(pendingImp)},'استعادة')}
+  catch(e){toast('ملف النسخة الاحتياطية غير صالح',1)}};
+ r.onerror=()=>toast('تعذر قراءة الملف',1);r.readAsText(f);$('#imp').value=''}
+function applyRestore(d){d.seq=Math.max(+d.seq||0,100,...d.tx.map(x=>+x.id||0),...d.products.map(x=>+x.id||0),...d.cats.map(x=>+x.id||0))+1;
+ db=d;saveData();document.body.classList.toggle('dark',!!db.settings.dark);toast('تمت استعادة البيانات بنجاح');render()}
+
+/* ===== تصدير Excel ===== */
+const txSheet=L=>[['#','التاريخ','الصنف','الكمية','السعر','الإجمالي'],...L.map(x=>[x.id,fd(x.date),x.name,x.qty,x.price,x.total])];
+function xlData(){const P=db.products;return[
+ ['المخزون',[['الرمز','الصنف','القسم','الكمية','سعر الشراء','سعر البيع','الحد الأدنى','الحالة','قيمة المخزون','ملاحظات'],...P.map(p=>[p.code,p.name,catName(p.cat),p.qty,p.buy,p.sell,p.min,stL[st(p)],p.qty*p.buy,p.note||''])]],
+ ['المشتريات',txSheet(range('buy'))],['المبيعات',txSheet(range('sell'))],
+ ['حركة المخزون',[txHead,...db.tx.map(x=>[x.id,fd(x.date),T[x.type][0],x.name,x.qty,x.price,x.total,x.note||''])]],
+ ['الأقسام',[['القسم','عدد الأصناف'],...db.cats.map(c=>[c.name,P.filter(p=>p.cat==c.id).length])]]]}
+function exportExcel(only){const sh=xlData().filter(s=>!only||s[0]==only),name='inventory-'+stamp();
+ try{
+  if(window.XLSX){const wb=XLSX.utils.book_new();sh.forEach(s=>{const ws=XLSX.utils.aoa_to_sheet(s[1]);ws['!cols']=s[1][0].map(()=>({wch:18}));XLSX.utils.book_append_sheet(wb,ws,s[0])});wb.Workbook={Views:[{RTL:true}]};XLSX.writeFile(wb,name+'.xlsx')}
+  else{const x=v=>String(v).replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
+   const o='<?xml version="1.0" encoding="UTF-8"?><Workbook xmlns="urn:schemas-microsoft-com:office:spreadsheet" xmlns:ss="urn:schemas-microsoft-com:office:spreadsheet">'+sh.map(s=>`<Worksheet ss:Name="${s[0]}"><Table>${s[1].map(r=>'<Row>'+r.map(c=>`<Cell><Data ss:Type="${typeof c=='number'?'Number':'String'}">${x(c)}</Data></Cell>`).join('')+'</Row>').join('')}</Table><WorksheetOptions xmlns="urn:schemas-microsoft-com:office:excel"><DisplayRightToLeft/></WorksheetOptions></Worksheet>`).join('')+'</Workbook>';
+   download(new Blob([o],{type:'application/vnd.ms-excel'}),name+'.xls');toast('تم التصدير بصيغة XLS (لا يوجد اتصال بمكتبة XLSX)');return}
+  toast('تم تصدير ملف Excel')}catch(e){toast('فشل التصدير: '+e.message,1)}}
+
+function resetAll(){if(!confirm('سيتم حذف جميع البيانات نهائيًا. هل أنت متأكد؟')||!confirm('تأكيد أخير: إعادة ضبط كاملة؟'))return;
+ makeSnap('قبل إعادة الضبط');db=fresh();saveData();document.body.classList.remove('dark');toast('تمت إعادة الضبط');go('home')}
+
+/* الدخول */
+function login(){const s=db.settings,pw=$('#lp').value,hashed=String(s.pass).startsWith('h:'),ok=hashed?hashPw(pw)==s.pass:pw==s.pass;
+ if(val('lu')==s.user&&ok){if(!hashed){s.pass=hashPw(pw);saveData()}sessionStorage.setItem('inv_s','1');$('#lp').value='';$('#login').style.display='none';render();remind()}else toast('اسم المستخدم أو كلمة المرور غير صحيحة',1)}
+function logout(){sessionStorage.removeItem('inv_s');$('#lp').value='';$('#login').style.display='flex'}
+
+/* تشغيل */
+loadData();autoSnap();document.body.classList.toggle('dark',!!db.settings.dark);
+if(sessionStorage.getItem('inv_s')){render();remind()}else $('#login').style.display='flex'
+</script>
+</body>
+</html>
